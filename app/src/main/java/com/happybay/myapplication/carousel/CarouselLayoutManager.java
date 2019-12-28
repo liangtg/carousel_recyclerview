@@ -470,8 +470,10 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager implements
 
         if (null != mViewPostLayout) {
             final ItemTransformation transformation = mViewPostLayout.transformChild(view, layoutOrder.mItemPositionDiff, mOrientation);
-            view.setTranslationX(transformation.mTranslationX);
-            view.setTranslationY(transformation.mTranslationY);
+            view.offsetLeftAndRight((int) transformation.mTranslationX);
+            view.offsetTopAndBottom((int) transformation.mTranslationY);
+            //view.setTranslationX(transformation.mTranslationX);
+            //view.setTranslationY(transformation.mTranslationY);
             view.setScaleX(transformation.mScaleX);
             view.setScaleY(transformation.mScaleY);
         }
@@ -606,7 +608,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager implements
             dimenDiff = (getWidthNoPadding() - mDecoratedChildWidth) / 2;
         }
         //noinspection NumericCastThatLosesPrecision
-        return (int) Math.round(Math.signum(itemPositionDiff) * dimenDiff * smoothPosition);
+        return (int) Math.round(Math.signum(itemPositionDiff) * dimenDiff * 0);
     }
 
     /**

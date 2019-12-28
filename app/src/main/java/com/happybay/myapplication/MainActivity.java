@@ -3,6 +3,7 @@ package com.happybay.myapplication;
 import android.app.Activity;
 import android.graphics.Rect;
 import android.os.Bundle;
+import android.util.Log;
 import android.util.SparseIntArray;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,9 +16,11 @@ import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.GlideBuilder;
+import com.happybay.myapplication.carousel.CarouselAnimator;
 import com.happybay.myapplication.carousel.CarouselLayoutManager;
+import com.happybay.myapplication.carousel.CarouselSnapHelper;
 import com.happybay.myapplication.carousel.CarouselZoomPostLayoutListener;
-import com.happybay.myapplication.carousel.CenterScrollListener;
+import java.util.ArrayList;
 
 public class MainActivity extends Activity {
     RecyclerView view;
@@ -28,14 +31,24 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        findViewById(R.id.reset).setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                adapter.reset();
+                adapter.notifyDataSetChanged();
+            }
+        });
+        findViewById(R.id.clear).setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                adapter.notifyItemRangeRemoved(0, adapter.array.size());
+                adapter.array.clear();
+            }
+        });
         view = findViewById(R.id.recycler);
         CarouselLayoutManager layoutManager =
             new CarouselLayoutManager(CarouselLayoutManager.HORIZONTAL);
         layoutManager.setPostLayoutListener(new CarouselZoomPostLayoutListener());
         view.setLayoutManager(layoutManager);
-        //view.setLayoutManager(new LinearLayoutManager(this,LinearLayoutManager.HORIZONTAL,false));
         view.setHasFixedSize(true);
-        view.addOnScrollListener(new CenterScrollListener());
         adapter = new TestAdapter();
         view.setAdapter(adapter);
         view.addItemDecoration(new RecyclerView.ItemDecoration() {
@@ -48,7 +61,9 @@ public class MainActivity extends Activity {
         Glide.init(this, new GlideBuilder());
         ItemTouchHelper helper = new ItemTouchHelper(new DeleteHelper());
         helper.attachToRecyclerView(view);
-        view.setItemAnimator(new DefaultItemAnimator());
+        view.setItemAnimator(new Animator());
+        CarouselSnapHelper snapHelper = new CarouselSnapHelper();
+        snapHelper.attachToRecyclerView(view);
     }
 
     private class VH extends RecyclerView.ViewHolder implements View.OnClickListener {
@@ -109,8 +124,44 @@ public class MainActivity extends Activity {
         }
 
         @Override public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
-            adapter.array.removeAt(viewHolder.getAdapterPosition());
-            adapter.notifyItemRemoved(viewHolder.getAdapterPosition());
+            int position = viewHolder.getAdapterPosition();
+            adapter.array.removeAt(position);
+            adapter.notifyItemRemoved(position);
+            if (adapter.array.size() == 0) return;
+            if (position == adapter.array.size()) {
+                adapter.notifyDataSetChanged();
+            } else {
+                adapter.notifyItemRangeChanged(position, 2);
+            }
+        }
+    }
+
+    class Animator extends CarouselAnimator {
+        public Animator() {
+            setRemoveDuration(500);
+            setMoveDuration(500);
+            setAddDuration(500);
+            setChangeDuration(500);
+        }
+        ArrayList<RecyclerView.ViewHolder> list = new ArrayList<>();
+        float scale;
+
+        @Override public void onChangeStarting(RecyclerView.ViewHolder item, boolean oldItem) {
+            if (list.contains(item)){
+                list.remove(item);
+                return;
+            }
+            Log.d("anim", "pos:" + oldItem+item.getAdapterPosition());
+            list.add(item);
+            if (oldItem) {
+                scale = item.itemView.getScaleX();
+                item.itemView.animate().cancel();
+            }else{
+                float nscale = item.itemView.getScaleX();
+                item.itemView.setScaleX(scale);
+                item.itemView.setScaleY(scale);
+                item.itemView.animate().scaleX(nscale).scaleY(nscale).start();
+            }
         }
     }
 }
