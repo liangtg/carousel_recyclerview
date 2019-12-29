@@ -1,19 +1,19 @@
 package com.happybay.myapplication.carousel;
+
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.TimeInterpolator;
 import android.animation.ValueAnimator;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewPropertyAnimator;
-
 import androidx.annotation.NonNull;
 import androidx.core.view.ViewCompat;
-
-import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.SimpleItemAnimator;
 import java.util.ArrayList;
 import java.util.List;
+
 /**
  * @ProjectName: My Application
  * @ClassName: CarouselAnimator
@@ -28,63 +28,17 @@ public class CarouselAnimator extends SimpleItemAnimator {
     private static final boolean DEBUG = false;
 
     private static TimeInterpolator sDefaultInterpolator;
-
-    private ArrayList<RecyclerView.ViewHolder> mPendingRemovals = new ArrayList<>();
-    private ArrayList<RecyclerView.ViewHolder> mPendingAdditions = new ArrayList<>();
-    private ArrayList<CarouselAnimator.MoveInfo> mPendingMoves = new ArrayList<>();
-    private ArrayList<CarouselAnimator.ChangeInfo> mPendingChanges = new ArrayList<>();
-
     ArrayList<ArrayList<RecyclerView.ViewHolder>> mAdditionsList = new ArrayList<>();
     ArrayList<ArrayList<CarouselAnimator.MoveInfo>> mMovesList = new ArrayList<>();
     ArrayList<ArrayList<CarouselAnimator.ChangeInfo>> mChangesList = new ArrayList<>();
-
     ArrayList<RecyclerView.ViewHolder> mAddAnimations = new ArrayList<>();
     ArrayList<RecyclerView.ViewHolder> mMoveAnimations = new ArrayList<>();
     ArrayList<RecyclerView.ViewHolder> mRemoveAnimations = new ArrayList<>();
     ArrayList<RecyclerView.ViewHolder> mChangeAnimations = new ArrayList<>();
-
-    private static class MoveInfo {
-        public RecyclerView.ViewHolder holder;
-        public int fromX, fromY, toX, toY;
-
-        MoveInfo(RecyclerView.ViewHolder holder, int fromX, int fromY, int toX, int toY) {
-            this.holder = holder;
-            this.fromX = fromX;
-            this.fromY = fromY;
-            this.toX = toX;
-            this.toY = toY;
-        }
-    }
-
-    private static class ChangeInfo {
-        public RecyclerView.ViewHolder oldHolder, newHolder;
-        public int fromX, fromY, toX, toY;
-        private ChangeInfo(RecyclerView.ViewHolder oldHolder, RecyclerView.ViewHolder newHolder) {
-            this.oldHolder = oldHolder;
-            this.newHolder = newHolder;
-        }
-
-        ChangeInfo(RecyclerView.ViewHolder oldHolder, RecyclerView.ViewHolder newHolder,
-            int fromX, int fromY, int toX, int toY) {
-            this(oldHolder, newHolder);
-            this.fromX = fromX;
-            this.fromY = fromY;
-            this.toX = toX;
-            this.toY = toY;
-        }
-
-        @Override
-        public String toString() {
-            return "ChangeInfo{"
-                + "oldHolder=" + oldHolder
-                + ", newHolder=" + newHolder
-                + ", fromX=" + fromX
-                + ", fromY=" + fromY
-                + ", toX=" + toX
-                + ", toY=" + toY
-                + '}';
-        }
-    }
+    private ArrayList<RecyclerView.ViewHolder> mPendingRemovals = new ArrayList<>();
+    private ArrayList<RecyclerView.ViewHolder> mPendingAdditions = new ArrayList<>();
+    private ArrayList<CarouselAnimator.MoveInfo> mPendingMoves = new ArrayList<>();
+    private ArrayList<CarouselAnimator.ChangeInfo> mPendingChanges = new ArrayList<>();
 
     @Override
     public void runPendingAnimations() {
@@ -185,25 +139,32 @@ public class CarouselAnimator extends SimpleItemAnimator {
     }
 
     private void animateRemoveImpl(final RecyclerView.ViewHolder holder) {
+        Log.d("anim", "remove: " + holder.getAdapterPosition());
+
         final View view = holder.itemView;
         final ViewPropertyAnimator animation = view.animate();
         mRemoveAnimations.add(holder);
-        animation.setDuration(getRemoveDuration()).alpha(0).setListener(
-            new AnimatorListenerAdapter() {
-                @Override
-                public void onAnimationStart(Animator animator) {
-                    dispatchRemoveStarting(holder);
-                }
+        animation.setDuration(getRemoveDuration())
+            .alpha(0)
+            .translationYBy(view.getHeight())
+            .setListener(
+                new AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationStart(Animator animator) {
+                        dispatchRemoveStarting(holder);
+                    }
 
-                @Override
-                public void onAnimationEnd(Animator animator) {
-                    animation.setListener(null);
-                    view.setAlpha(1);
-                    dispatchRemoveFinished(holder);
-                    mRemoveAnimations.remove(holder);
-                    dispatchFinishedWhenDone();
-                }
-            }).start();
+                    @Override
+                    public void onAnimationEnd(Animator animator) {
+                        animation.setListener(null);
+                        view.setAlpha(1);
+                        view.setTranslationY(0);
+                        dispatchRemoveFinished(holder);
+                        mRemoveAnimations.remove(holder);
+                        dispatchFinishedWhenDone();
+                    }
+                })
+            .start();
     }
 
     @Override
@@ -215,6 +176,7 @@ public class CarouselAnimator extends SimpleItemAnimator {
     }
 
     void animateAddImpl(final RecyclerView.ViewHolder holder) {
+        Log.d("anim", "add: " + holder.getAdapterPosition());
         final View view = holder.itemView;
         final ViewPropertyAnimator animation = view.animate();
         mAddAnimations.add(holder);
@@ -263,10 +225,19 @@ public class CarouselAnimator extends SimpleItemAnimator {
         return true;
     }
 
-    void animateMoveImpl(final RecyclerView.ViewHolder holder, int fromX, int fromY, int toX, int toY) {
+    void animateMoveImpl(final RecyclerView.ViewHolder holder, int fromX, int fromY, int toX,
+        int toY) {
+        Log.d("anim", "move  f:" + fromX + "-" + toX + " w:" + holder.itemView.getWidth());
         final View view = holder.itemView;
         final int deltaX = toX - fromX;
         final int deltaY = toY - fromY;
+        float scale = holder.itemView.getScaleX();
+        float oldScale =
+            (float) (scale + 0.25f * Math.ceil((fromX - toX * 1d) / holder.itemView.getWidth()));
+        if (oldScale == scale) oldScale = scale - 0.25f;
+        Log.d("anim", "move : oldscale:" + oldScale + "now: " + scale);
+        holder.itemView.setScaleY(oldScale);
+        holder.itemView.setScaleX(oldScale);
         if (deltaX != 0) {
             view.animate().translationX(0);
         }
@@ -277,6 +248,7 @@ public class CarouselAnimator extends SimpleItemAnimator {
         // vpas are canceled (and can't end them. why?)
         // need listener functionality in VPACompat for this. Ick.
         final ViewPropertyAnimator animation = view.animate();
+        animation.scaleX(scale).scaleY(scale);
         mMoveAnimations.add(holder);
         animation.setDuration(getMoveDuration()).setListener(new AnimatorListenerAdapter() {
             @Override
@@ -305,7 +277,8 @@ public class CarouselAnimator extends SimpleItemAnimator {
     }
 
     @Override
-    public boolean animateChange(RecyclerView.ViewHolder oldHolder, RecyclerView.ViewHolder newHolder,
+    public boolean animateChange(RecyclerView.ViewHolder oldHolder,
+        RecyclerView.ViewHolder newHolder,
         int fromX, int fromY, int toX, int toY) {
         if (oldHolder == newHolder) {
             // Don't know how to run change animations when the same view holder is re-used.
@@ -329,29 +302,37 @@ public class CarouselAnimator extends SimpleItemAnimator {
             newHolder.itemView.setTranslationY(-deltaY);
             newHolder.itemView.setAlpha(0);
         }
-        mPendingChanges.add(new CarouselAnimator.ChangeInfo(oldHolder, newHolder, fromX, fromY, toX, toY));
+        mPendingChanges.add(
+            new CarouselAnimator.ChangeInfo(oldHolder, newHolder, fromX, fromY, toX, toY));
         return true;
     }
 
     void animateChangeImpl(final CarouselAnimator.ChangeInfo changeInfo) {
+        Log.d("anim", "change:" + changeInfo);
         final RecyclerView.ViewHolder holder = changeInfo.oldHolder;
         final View view = holder == null ? null : holder.itemView;
         final RecyclerView.ViewHolder newHolder = changeInfo.newHolder;
         final View newView = newHolder != null ? newHolder.itemView : null;
         if (view != null) {
+            view.setAlpha(1);
             final ViewPropertyAnimator oldViewAnim = view.animate().setDuration(
                 getChangeDuration());
+            float scale = null == newView ? 1 : newView.getScaleX();
+            oldViewAnim.scaleX(scale).scaleY(scale);
+            Log.d("anim", "old scale: " + scale);
             mChangeAnimations.add(changeInfo.oldHolder);
             oldViewAnim.translationX(changeInfo.toX - changeInfo.fromX);
             oldViewAnim.translationY(changeInfo.toY - changeInfo.fromY);
-            oldViewAnim.alpha(0).setListener(new AnimatorListenerAdapter() {
+            oldViewAnim.alpha(1).setListener(new AnimatorListenerAdapter() {
                 @Override
                 public void onAnimationStart(Animator animator) {
+                    Log.d("anim", "change old start");
                     dispatchChangeStarting(changeInfo.oldHolder, true);
                 }
 
                 @Override
                 public void onAnimationEnd(Animator animator) {
+                    Log.d("anim", "change old end" + holder.getAdapterPosition());
                     oldViewAnim.setListener(null);
                     view.setAlpha(1);
                     view.setTranslationX(0);
@@ -360,18 +341,19 @@ public class CarouselAnimator extends SimpleItemAnimator {
                     mChangeAnimations.remove(changeInfo.oldHolder);
                     dispatchFinishedWhenDone();
                 }
-            }).setDuration(0).start();
+            }).start();
         }
         if (newView != null) {
+            newView.setAlpha(0);
             final ViewPropertyAnimator newViewAnimation = newView.animate();
-            newView.setAlpha(1);
             mChangeAnimations.add(changeInfo.newHolder);
             newViewAnimation.translationX(0).translationY(0).setDuration(getChangeDuration())
-                .alpha(1).setListener(new AnimatorListenerAdapter() {
+                .alpha(0).setListener(new AnimatorListenerAdapter() {
                 @Override
                 public void onAnimationStart(Animator animator) {
                     dispatchChangeStarting(changeInfo.newHolder, false);
                 }
+
                 @Override
                 public void onAnimationEnd(Animator animator) {
                     newViewAnimation.setListener(null);
@@ -386,7 +368,8 @@ public class CarouselAnimator extends SimpleItemAnimator {
         }
     }
 
-    private void endChangeAnimation(List<CarouselAnimator.ChangeInfo> infoList, RecyclerView.ViewHolder item) {
+    private void endChangeAnimation(List<CarouselAnimator.ChangeInfo> infoList,
+        RecyclerView.ViewHolder item) {
         for (int i = infoList.size() - 1; i >= 0; i--) {
             CarouselAnimator.ChangeInfo changeInfo = infoList.get(i);
             if (endChangeAnimationIfNecessary(changeInfo, item)) {
@@ -405,7 +388,9 @@ public class CarouselAnimator extends SimpleItemAnimator {
             endChangeAnimationIfNecessary(changeInfo, changeInfo.newHolder);
         }
     }
-    private boolean endChangeAnimationIfNecessary(CarouselAnimator.ChangeInfo changeInfo, RecyclerView.ViewHolder item) {
+
+    private boolean endChangeAnimationIfNecessary(CarouselAnimator.ChangeInfo changeInfo,
+        RecyclerView.ViewHolder item) {
         boolean oldItem = false;
         if (changeInfo.newHolder == item) {
             changeInfo.newHolder = null;
@@ -639,12 +624,15 @@ public class CarouselAnimator extends SimpleItemAnimator {
      * If the payload list is not empty, DefaultItemAnimator returns <code>true</code>.
      * When this is the case:
      * <ul>
-     * <li>If you override {@link #animateChange(RecyclerView.ViewHolder, RecyclerView.ViewHolder, int, int, int, int)}, both
+     * <li>If you override {@link #animateChange(RecyclerView.ViewHolder, RecyclerView.ViewHolder,
+     * int, int, int, int)}, both
      * ViewHolder arguments will be the same instance.
      * </li>
      * <li>
-     * If you are not overriding {@link #animateChange(RecyclerView.ViewHolder, RecyclerView.ViewHolder, int, int, int, int)},
-     * then DefaultItemAnimator will call {@link #animateMove(RecyclerView.ViewHolder, int, int, int, int)} and
+     * If you are not overriding {@link #animateChange(RecyclerView.ViewHolder,
+     * RecyclerView.ViewHolder, int, int, int, int)},
+     * then DefaultItemAnimator will call {@link #animateMove(RecyclerView.ViewHolder, int, int,
+     * int, int)} and
      * run a move animation instead.
      * </li>
      * </ul>
@@ -653,5 +641,49 @@ public class CarouselAnimator extends SimpleItemAnimator {
     public boolean canReuseUpdatedViewHolder(@NonNull RecyclerView.ViewHolder viewHolder,
         @NonNull List<Object> payloads) {
         return !payloads.isEmpty() || super.canReuseUpdatedViewHolder(viewHolder, payloads);
+    }
+
+    private static class MoveInfo {
+        public RecyclerView.ViewHolder holder;
+        public int fromX, fromY, toX, toY;
+
+        MoveInfo(RecyclerView.ViewHolder holder, int fromX, int fromY, int toX, int toY) {
+            this.holder = holder;
+            this.fromX = fromX;
+            this.fromY = fromY;
+            this.toX = toX;
+            this.toY = toY;
+        }
+    }
+
+    private static class ChangeInfo {
+        public RecyclerView.ViewHolder oldHolder, newHolder;
+        public int fromX, fromY, toX, toY;
+
+        private ChangeInfo(RecyclerView.ViewHolder oldHolder, RecyclerView.ViewHolder newHolder) {
+            this.oldHolder = oldHolder;
+            this.newHolder = newHolder;
+        }
+
+        ChangeInfo(RecyclerView.ViewHolder oldHolder, RecyclerView.ViewHolder newHolder,
+            int fromX, int fromY, int toX, int toY) {
+            this(oldHolder, newHolder);
+            this.fromX = fromX;
+            this.fromY = fromY;
+            this.toX = toX;
+            this.toY = toY;
+        }
+
+        @Override
+        public String toString() {
+            return "ChangeInfo{"
+                + "oldHolder=" + oldHolder
+                + ", newHolder=" + newHolder
+                + ", fromX=" + fromX
+                + ", fromY=" + fromY
+                + ", toX=" + toX
+                + ", toY=" + toY
+                + '}';
+        }
     }
 }

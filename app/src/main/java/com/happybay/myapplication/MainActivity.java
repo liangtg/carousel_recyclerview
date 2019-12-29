@@ -3,7 +3,6 @@ package com.happybay.myapplication;
 import android.app.Activity;
 import android.graphics.Rect;
 import android.os.Bundle;
-import android.util.Log;
 import android.util.SparseIntArray;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,7 +10,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
@@ -20,12 +18,12 @@ import com.happybay.myapplication.carousel.CarouselAnimator;
 import com.happybay.myapplication.carousel.CarouselLayoutManager;
 import com.happybay.myapplication.carousel.CarouselSnapHelper;
 import com.happybay.myapplication.carousel.CarouselZoomPostLayoutListener;
-import java.util.ArrayList;
 
 public class MainActivity extends Activity {
     RecyclerView view;
     Toast toast;
     private TestAdapter adapter;
+    private CarouselLayoutManager layoutManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,13 +37,13 @@ public class MainActivity extends Activity {
         });
         findViewById(R.id.clear).setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
-                adapter.notifyItemRangeRemoved(0, adapter.array.size());
+                int size = adapter.array.size();
                 adapter.array.clear();
+                adapter.notifyItemRangeChanged(0, size);
             }
         });
         view = findViewById(R.id.recycler);
-        CarouselLayoutManager layoutManager =
-            new CarouselLayoutManager(CarouselLayoutManager.HORIZONTAL);
+        layoutManager = new CarouselLayoutManager(CarouselLayoutManager.HORIZONTAL);
         layoutManager.setPostLayoutListener(new CarouselZoomPostLayoutListener());
         view.setLayoutManager(layoutManager);
         view.setHasFixedSize(true);
@@ -88,6 +86,7 @@ public class MainActivity extends Activity {
 
         public TestAdapter() {
             reset();
+            setHasStableIds(true);
         }
 
         private void reset() {
@@ -104,6 +103,10 @@ public class MainActivity extends Activity {
 
         @Override public void onBindViewHolder(@NonNull VH holder, int position) {
             Glide.with(MainActivity.this).load(array.valueAt(position)).into(holder.image);
+        }
+
+        @Override public long getItemId(int position) {
+            return array.valueAt(position);
         }
 
         @Override public int getItemCount() {
@@ -126,42 +129,26 @@ public class MainActivity extends Activity {
         @Override public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
             int position = viewHolder.getAdapterPosition();
             adapter.array.removeAt(position);
-            adapter.notifyItemRemoved(position);
-            if (adapter.array.size() == 0) return;
-            if (position == adapter.array.size()) {
-                adapter.notifyDataSetChanged();
+            //adapter.notifyItemRemoved(position);
+            if (position == adapter.array.size() || position == adapter.array.size() - 1) {
+                int start = position - 2;
+                if (start < 0) start = 0;
+                int end = position - 1;
+                if (end < 0) end = 0;
+                adapter.notifyItemRemoved(position);
+                adapter.notifyItemRangeChanged(start, end - start);
             } else {
-                adapter.notifyItemRangeChanged(position, 2);
+                adapter.notifyItemRangeChanged(position, adapter.array.size());
             }
         }
     }
 
     class Animator extends CarouselAnimator {
         public Animator() {
-            setRemoveDuration(500);
-            setMoveDuration(500);
+            setMoveDuration(1500);
             setAddDuration(500);
-            setChangeDuration(500);
-        }
-        ArrayList<RecyclerView.ViewHolder> list = new ArrayList<>();
-        float scale;
-
-        @Override public void onChangeStarting(RecyclerView.ViewHolder item, boolean oldItem) {
-            if (list.contains(item)){
-                list.remove(item);
-                return;
-            }
-            Log.d("anim", "pos:" + oldItem+item.getAdapterPosition());
-            list.add(item);
-            if (oldItem) {
-                scale = item.itemView.getScaleX();
-                item.itemView.animate().cancel();
-            }else{
-                float nscale = item.itemView.getScaleX();
-                item.itemView.setScaleX(scale);
-                item.itemView.setScaleY(scale);
-                item.itemView.animate().scaleX(nscale).scaleY(nscale).start();
-            }
+            setChangeDuration(1000);
+            setRemoveDuration(1000);
         }
     }
 }
