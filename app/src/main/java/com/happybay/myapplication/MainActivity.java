@@ -1,5 +1,6 @@
 package com.happybay.myapplication;
 
+import android.animation.AnimatorListenerAdapter;
 import android.app.Activity;
 import android.graphics.Rect;
 import android.os.Bundle;
@@ -37,9 +38,18 @@ public class MainActivity extends Activity {
         });
         findViewById(R.id.clear).setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
-                int size = adapter.array.size();
-                adapter.array.clear();
-                adapter.notifyItemRangeChanged(0, size);
+                view.animate()
+                    .alpha(0)
+                    .translationY(-view.getHeight())
+                    .setDuration(500)
+                    .setListener(new AnimatorListenerAdapter() {
+                        @Override public void onAnimationEnd(android.animation.Animator animation) {
+                            view.setAlpha(1);
+                            view.setTranslationY(0);
+                            adapter.array.clear();
+                            adapter.notifyDataSetChanged();
+                        }
+                    });
             }
         });
         view = findViewById(R.id.recycler);
@@ -129,26 +139,36 @@ public class MainActivity extends Activity {
         @Override public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
             int position = viewHolder.getAdapterPosition();
             adapter.array.removeAt(position);
-            //adapter.notifyItemRemoved(position);
+            int center = layoutManager.getCenterItemPosition();
+            int end = adapter.array.size();
             if (position == adapter.array.size() || position == adapter.array.size() - 1) {
-                int start = position - 2;
-                if (start < 0) start = 0;
-                int end = position - 1;
-                if (end < 0) end = 0;
-                adapter.notifyItemRemoved(position);
-                adapter.notifyItemRangeChanged(start, end - start);
+                if (position == end) {
+                    adapter.notifyItemRemoved(position);
+                    if (center == end) {
+                        adapter.notifyItemRangeChanged(0, position + 1);
+                    }
+                } else {
+                    if (position == center) {//ok
+                        adapter.notifyItemRangeChanged(position, adapter.getItemCount() + 1);//ok
+                    } else if (position == 0) {//ok
+                        adapter.notifyItemRemoved(position);
+                    } else {//ok
+                        adapter.notifyItemRemoved(position);
+                        adapter.notifyItemRangeChanged(0, adapter.getItemCount());
+                    }
+                }
             } else {
-                adapter.notifyItemRangeChanged(position, adapter.array.size());
+                adapter.notifyItemRangeChanged(position, adapter.getItemCount());
             }
         }
     }
 
     class Animator extends CarouselAnimator {
         public Animator() {
-            setMoveDuration(1500);
+            setMoveDuration(500);
             setAddDuration(500);
-            setChangeDuration(1000);
-            setRemoveDuration(1000);
+            setChangeDuration(500);
+            setRemoveDuration(500);
         }
     }
 }
