@@ -5,11 +5,14 @@ import android.app.Activity;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.util.SparseIntArray;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
@@ -25,11 +28,35 @@ public class MainActivity extends Activity {
     Toast toast;
     private TestAdapter adapter;
     private CarouselLayoutManager layoutManager;
+    private CarouselSnapHelper snapHelper;
+    private View touchFilter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        touchFilter = findViewById(R.id.touchFilter);
+        touchFilter.setOnTouchListener(new View.OnTouchListener() {
+            @Override public boolean onTouch(View v, MotionEvent event) {
+                return true;
+            }
+        });
+        ToggleButton toggle = findViewById(R.id.toggle);
+        toggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (view.getChildCount() <= 2) return;
+                int p = layoutManager.getCenterItemPosition();
+                if (p > 0) {
+                    snapHelper.setScrollToHead(true);
+                    touchFilter.setEnabled(true);
+                    view.smoothScrollToPosition(0);
+                } else {
+                    touchFilter.setEnabled(false);
+                    snapHelper.setScrollToHead(false);
+                    view.smoothScrollToPosition(2);
+                }
+            }
+        });
         findViewById(R.id.reset).setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 adapter.reset();
@@ -54,6 +81,7 @@ public class MainActivity extends Activity {
         });
         view = findViewById(R.id.recycler);
         layoutManager = new CarouselLayoutManager(CarouselLayoutManager.HORIZONTAL);
+        layoutManager.setMaxVisibleItems(1);
         layoutManager.setPostLayoutListener(new CarouselZoomPostLayoutListener());
         view.setLayoutManager(layoutManager);
         view.setHasFixedSize(true);
@@ -70,7 +98,7 @@ public class MainActivity extends Activity {
         ItemTouchHelper helper = new ItemTouchHelper(new DeleteHelper());
         helper.attachToRecyclerView(view);
         view.setItemAnimator(new Animator());
-        CarouselSnapHelper snapHelper = new CarouselSnapHelper();
+        snapHelper = new CarouselSnapHelper();
         snapHelper.attachToRecyclerView(view);
     }
 
@@ -93,6 +121,7 @@ public class MainActivity extends Activity {
 
     private class TestAdapter extends RecyclerView.Adapter<VH> {
         private SparseIntArray array = new SparseIntArray(10);
+        private int headCount = 2;
 
         public TestAdapter() {
             reset();
@@ -111,16 +140,26 @@ public class MainActivity extends Activity {
             return new VH(getLayoutInflater().inflate(R.layout.item_co, parent, false));
         }
 
+        @Override public int getItemViewType(int position) {
+            return position < headCount ? 1 : 2;
+        }
+
         @Override public void onBindViewHolder(@NonNull VH holder, int position) {
-            Glide.with(MainActivity.this).load(array.valueAt(position)).into(holder.image);
+            if (position < headCount) {
+                holder.image.setImageResource(0);
+            } else {
+                Glide.with(MainActivity.this)
+                    .load(array.valueAt(position - headCount))
+                    .into(holder.image);
+            }
         }
 
         @Override public long getItemId(int position) {
-            return array.valueAt(position);
+            return position < headCount ? position : array.valueAt(position);
         }
 
         @Override public int getItemCount() {
-            return array.size();
+            return array.size() + headCount;
         }
     }
 
@@ -138,37 +177,40 @@ public class MainActivity extends Activity {
 
         @Override public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
             int position = viewHolder.getAdapterPosition();
+            int animPosition = position;
+            if (position < adapter.headCount) return;
+            position -= adapter.headCount;
             adapter.array.removeAt(position);
             int center = layoutManager.getCenterItemPosition();
             int end = adapter.array.size();
             if (position == adapter.array.size() || position == adapter.array.size() - 1) {
                 if (position == end) {
-                    adapter.notifyItemRemoved(position);
+                    adapter.notifyItemRemoved(animPosition);
                     if (center == end) {
-                        adapter.notifyItemRangeChanged(0, position + 1);
+                        adapter.notifyItemRangeChanged(0, animPosition + 1);
                     }
                 } else {
                     if (position == center) {//ok
-                        adapter.notifyItemRangeChanged(position, adapter.getItemCount() + 1);//ok
+                        adapter.notifyItemRangeChanged(animPosition, adapter.getItemCount() + 1);//ok
                     } else if (position == 0) {//ok
-                        adapter.notifyItemRemoved(position);
+                        adapter.notifyItemRemoved(animPosition);
                     } else {//ok
-                        adapter.notifyItemRemoved(position);
+                        adapter.notifyItemRemoved(animPosition);
                         adapter.notifyItemRangeChanged(0, adapter.getItemCount());
                     }
                 }
             } else {
-                adapter.notifyItemRangeChanged(position, adapter.getItemCount());
+                adapter.notifyItemRangeChanged(animPosition, adapter.getItemCount());
             }
         }
     }
 
     class Animator extends CarouselAnimator {
         public Animator() {
-            setMoveDuration(500);
-            setAddDuration(500);
-            setChangeDuration(500);
-            setRemoveDuration(500);
+            //setMoveDuration(500);
+            //setAddDuration(500);
+            //setChangeDuration(500);
+            //setRemoveDuration(500);
         }
     }
 }

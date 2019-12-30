@@ -17,9 +17,20 @@ public class CarouselZoomPostLayoutListener implements CarouselLayoutManager.Pos
         final float itemPositionToCenterDiff, final int orientation) {
 
         float ds = itemPositionToCenterDiff * child.getWidth();
-        ds = ds * 0.75f;
-        if (ds < 0) ds *= 0.5f;
-        float scale = itemPositionToCenterDiff * 0.25f + 0.75f;
+        float k = 0.875f;
+        float kl = 0.5f;
+        ds = ds * k;
+        if (itemPositionToCenterDiff < 0) {
+            ds *= kl;
+            if (itemPositionToCenterDiff < -1) {
+                ds = (itemPositionToCenterDiff + 1 - kl) * child.getWidth() * k;
+            }
+        }
+
+        float zeroScale = 0.875f;
+        float scale =
+            itemPositionToCenterDiff * (itemPositionToCenterDiff < 0 ? 0.16f : (1 - zeroScale))
+                + zeroScale;
         if (scale > 1) scale = 1;
         child.setPivotX(child.getWidth() / 2);
         child.setPivotY(child.getHeight() / 2);

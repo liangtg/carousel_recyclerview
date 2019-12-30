@@ -97,10 +97,10 @@ public class CarouselAnimator extends SimpleItemAnimator {
             };
             if (removalsPending) {
                 RecyclerView.ViewHolder holder = changes.get(0).oldHolder;
-                ViewCompat.postOnAnimationDelayed(holder.itemView, changer, getRemoveDuration());
+                //ViewCompat.postOnAnimationDelayed(holder.itemView, changer, 0);
             } else {
-                changer.run();
             }
+            changer.run();
         }
         // Next, add stuff
         if (additionsPending) {
@@ -146,7 +146,7 @@ public class CarouselAnimator extends SimpleItemAnimator {
         mRemoveAnimations.add(holder);
         animation.setDuration(getRemoveDuration())
             .alpha(0)
-            .translationYBy(view.getHeight())
+            .translationY(view.getHeight())
             .setListener(
                 new AnimatorListenerAdapter() {
                     @Override

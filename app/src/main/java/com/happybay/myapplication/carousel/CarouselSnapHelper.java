@@ -16,9 +16,18 @@ import androidx.recyclerview.widget.RecyclerView;
  * @UpdateRemark: 更新说明
  */
 public class CarouselSnapHelper extends LinearSnapHelper {
+    private boolean scrollToHead = false;
+    private int headCount = 2;
+
+    public void setScrollToHead(boolean scroll) {
+        scrollToHead = scroll;
+    }
+
     @Override public View findSnapView(RecyclerView.LayoutManager layoutManager) {
+        if (layoutManager.getChildCount() <= headCount) return null;
         CarouselLayoutManager manager = (CarouselLayoutManager) layoutManager;
         int center = manager.getCenterItemPosition();
+        if (center < headCount && !scrollToHead) center = headCount;
         for (int i = 0; i < manager.getChildCount(); i++) {
             if (manager.getPosition(manager.getChildAt(i)) == center) return manager.getChildAt(i);
         }
@@ -38,6 +47,7 @@ public class CarouselSnapHelper extends LinearSnapHelper {
     @Override
     public int findTargetSnapPosition(RecyclerView.LayoutManager layoutManager, int velocityX,
         int velocityY) {
+        if (layoutManager.getChildCount() < headCount) return RecyclerView.NO_POSITION;
         CarouselLayoutManager manager = (CarouselLayoutManager) layoutManager;
         int position = super.findTargetSnapPosition(layoutManager, velocityX * 10, velocityY);
         if (position != RecyclerView.NO_POSITION) {
@@ -50,8 +60,8 @@ public class CarouselSnapHelper extends LinearSnapHelper {
                 Math.abs(distances[0]) > Math.abs(distances[1]) ? distances[0] : distances[1];
             int round = Math.round(distance / distancePerChild) + manager.getCenterItemPosition();
             final int itemCount = layoutManager.getItemCount();
-            if (round < 0) {
-                round = 0;
+            if (round < headCount) {
+                round = headCount;
             }
             if (round >= itemCount) {
                 round = itemCount - 1;
