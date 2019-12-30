@@ -4,6 +4,7 @@ import android.animation.AnimatorListenerAdapter;
 import android.app.Activity;
 import android.graphics.Rect;
 import android.os.Bundle;
+import android.util.Log;
 import android.util.SparseIntArray;
 import android.view.MotionEvent;
 import android.view.View;
@@ -44,17 +45,7 @@ public class MainActivity extends Activity {
         ToggleButton toggle = findViewById(R.id.toggle);
         toggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (view.getChildCount() <= 2) return;
-                int p = layoutManager.getCenterItemPosition();
-                if (p > 0) {
-                    snapHelper.setScrollToHead(true);
-                    touchFilter.setEnabled(true);
-                    view.smoothScrollToPosition(0);
-                } else {
-                    touchFilter.setEnabled(false);
-                    snapHelper.setScrollToHead(false);
-                    view.smoothScrollToPosition(2);
-                }
+                toggleRecyclerView();
             }
         });
         findViewById(R.id.reset).setOnClickListener(new View.OnClickListener() {
@@ -100,6 +91,22 @@ public class MainActivity extends Activity {
         view.setItemAnimator(new Animator());
         snapHelper = new CarouselSnapHelper();
         snapHelper.attachToRecyclerView(view);
+
+        toggleRecyclerView();
+    }
+
+    private void toggleRecyclerView() {
+        if (view.getChildCount() <= 2) return;
+        int p = layoutManager.getCenterItemPosition();
+        if (p > 1) {
+            snapHelper.setScrollToHead(true);
+            touchFilter.setEnabled(true);
+            view.smoothScrollToPosition(0);
+        } else {
+            touchFilter.setEnabled(false);
+            snapHelper.setScrollToHead(false);
+            view.smoothScrollToPosition(2);
+        }
     }
 
     private class VH extends RecyclerView.ViewHolder implements View.OnClickListener {
@@ -155,7 +162,7 @@ public class MainActivity extends Activity {
         }
 
         @Override public long getItemId(int position) {
-            return position < headCount ? position : array.valueAt(position);
+            return position < headCount ? position : array.valueAt(position - headCount);
         }
 
         @Override public int getItemCount() {
@@ -182,16 +189,17 @@ public class MainActivity extends Activity {
             position -= adapter.headCount;
             adapter.array.removeAt(position);
             int center = layoutManager.getCenterItemPosition();
-            int end = adapter.array.size();
+            int end = adapter.getItemCount();
             if (position == adapter.array.size() || position == adapter.array.size() - 1) {
-                if (position == end) {
+                if (animPosition == end) {
                     adapter.notifyItemRemoved(animPosition);
                     if (center == end) {
                         adapter.notifyItemRangeChanged(0, animPosition + 1);
                     }
                 } else {
                     if (position == center) {//ok
-                        adapter.notifyItemRangeChanged(animPosition, adapter.getItemCount() + 1);//ok
+                        adapter.notifyItemRangeChanged(animPosition,
+                            adapter.getItemCount() + 1);//ok
                     } else if (position == 0) {//ok
                         adapter.notifyItemRemoved(animPosition);
                     } else {//ok
