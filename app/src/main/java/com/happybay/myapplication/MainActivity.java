@@ -78,12 +78,6 @@ public class MainActivity extends Activity {
         view.setHasFixedSize(true);
         adapter = new TestAdapter();
         view.setAdapter(adapter);
-        view.addItemDecoration(new RecyclerView.ItemDecoration() {
-            @Override public void getItemOffsets(@NonNull Rect outRect, @NonNull View view,
-                @NonNull RecyclerView parent, @NonNull RecyclerView.State state) {
-                super.getItemOffsets(outRect, view, parent, state);
-            }
-        });
         toast = Toast.makeText(this, "", Toast.LENGTH_SHORT);
         Glide.init(this, new GlideBuilder());
         ItemTouchHelper helper = new ItemTouchHelper(new DeleteHelper());

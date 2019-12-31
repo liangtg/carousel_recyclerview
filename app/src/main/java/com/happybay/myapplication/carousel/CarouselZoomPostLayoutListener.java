@@ -22,11 +22,12 @@ public class CarouselZoomPostLayoutListener implements CarouselLayoutManager.Pos
         ds = ds * k;
         if (itemPositionToCenterDiff < 0) {
             ds *= kl;
-            if (itemPositionToCenterDiff < -1) {
+            if (itemPositionToCenterDiff <= -2) {
+                ds -= 100;
                 //ds = (itemPositionToCenterDiff + 1 - kl) * child.getWidth() * k;
-                float sk = 0.675f;
-                ds = sk * itemPositionToCenterDiff * child.getWidth()
-                    + (sk - k * kl) * child.getWidth();
+                //float sk = 0.675f;
+                //ds = sk * itemPositionToCenterDiff * child.getWidth()
+                //    + (sk - k * kl) * child.getWidth();
             }
         }
 
